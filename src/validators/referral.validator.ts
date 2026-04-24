@@ -1,0 +1,19 @@
+import { z } from 'zod';
+
+export const getLeaderboardValidator = z.object({
+  query: z.object({
+    limit: z.coerce.number().min(1).max(100).optional(),
+    period: z.string().optional(),
+  }),
+});
+
+export const applyAmbassadorValidator = z.object({
+  body: z.object({
+    campus: z.string().min(2),
+    faculty: z.string().optional(),
+    student_id: z.string().optional(),
+    graduation_year: z.coerce.number().optional(),
+    social_following: z.record(z.unknown()).optional(),
+    why_apply: z.string().optional(),
+  }),
+});
