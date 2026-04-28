@@ -10,6 +10,12 @@ interface AuthTokens {
   expires_in: number;
 }
 
+interface RegisterResult {
+  user: Record<string, unknown>;
+  tokens: AuthTokens;
+  verificationCode?: string;
+}
+
 const generateReferralCode = (username?: string) => {
   const prefix = (username || 'TMK').replace(/[^a-z0-9]/gi, '').slice(0, 5).toUpperCase() || 'TMK';
   return `${prefix}${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
@@ -20,11 +26,12 @@ export class AuthService {
     email: string;
     phone: string;
     username: string;
+    fullName?: string;
     display_name?: string;
     password: string;
     country?: string;
     referral_code?: string;
-  }): Promise<{ user: IUser; tokens: AuthTokens }> {
+  }): Promise<RegisterResult> {
     const existing = await User.findOne({
       $or: [{ email: data.email }, { phone: data.phone }, { username: data.username.toLowerCase() }],
     });
@@ -40,7 +47,7 @@ export class AuthService {
       username: data.username.toLowerCase(),
       password: data.password,
       profile: {
-        displayName: data.display_name || data.username,
+        displayName: data.fullName || data.display_name || data.username,
         bio: '',
         avatarUrl: '',
         coverUrl: '',
@@ -59,10 +66,14 @@ export class AuthService {
       await referrer.save();
     }
 
-    return { user, tokens: this.generateTokens(user) };
+    const result: RegisterResult = { user: this.sanitizeUser(user), tokens: this.generateTokens(user) };
+    if (env.NODE_ENV !== 'production') {
+      result.verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    }
+    return result;
   }
 
-  async login(identifier: string, password: string): Promise<{ user: IUser; tokens: AuthTokens }> {
+  async login(identifier: string, password: string): Promise<{ user: Record<string, unknown>; tokens: AuthTokens }> {
     const user = await User.findOne({
       $or: [{ email: identifier.toLowerCase() }, { username: identifier.toLowerCase() }, { phone: identifier }],
       isDeleted: false,
@@ -73,7 +84,7 @@ export class AuthService {
 
     user.lastLoginAt = new Date();
     await user.save();
-    return { user, tokens: this.generateTokens(user) };
+    return { user: this.sanitizeUser(user), tokens: this.generateTokens(user) };
   }
 
   async refreshToken(refreshToken: string): Promise<AuthTokens> {
@@ -97,6 +108,12 @@ export class AuthService {
       refresh: jwt.sign({ userId: user._id.toString() }, env.jwtRefreshSecret, refreshOptions),
       expires_in: 3600,
     };
+  }
+
+  sanitizeUser(user: IUser): Record<string, unknown> {
+    const plain = user.toObject() as Record<string, unknown>;
+    delete plain.password;
+    return plain;
   }
 }
 

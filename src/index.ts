@@ -11,6 +11,8 @@ import tipRoutes from '@routes/tipping.routes';
 import notificationRoutes from '@routes/notifications.routes';
 import referralRoutes from '@routes/referral.routes';
 import vipRoutes from '@routes/vip.routes';
+import creatorRoutes from '@routes/creator.routes';
+import userRoutes from '@routes/user.routes';
 
 const app: Application = express();
 
@@ -39,6 +41,8 @@ app.use('/api/v1/referral', referralRoutes);
 app.use('/api/v1/referrals', referralRoutes);
 app.use('/api/v1', referralRoutes);
 app.use('/api/v1/vip', vipRoutes);
+app.use('/api/v1/creators', creatorRoutes);
+app.use('/api/v1/users', userRoutes);
 
 // Global Error Handler
 app.use(errorHandler);

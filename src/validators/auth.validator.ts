@@ -5,6 +5,7 @@ export const registerSchema = z.object({
     email: z.string().email(),
     phone: z.string().min(6),
     username: z.string().min(3),
+    fullName: z.string().min(2).optional(),
     display_name: z.string().optional(),
     password: z.string().min(8),
     confirm_password: z.string().optional(),
@@ -16,12 +17,14 @@ export const registerSchema = z.object({
 
 export const loginSchema = z.object({
   body: z.object({
+    emailOrUsername: z.string().optional(),
     identifier: z.string().optional(),
     email: z.string().optional(),
+    username: z.string().optional(),
     phone: z.string().optional(),
     password: z.string().min(1),
-  }).refine((value) => Boolean(value.identifier || value.email || value.phone), {
-    message: 'identifier, email, or phone is required',
+  }).refine((value) => Boolean(value.emailOrUsername || value.identifier || value.email || value.username || value.phone), {
+    message: 'emailOrUsername, identifier, email, username, or phone is required',
   }),
 });
 

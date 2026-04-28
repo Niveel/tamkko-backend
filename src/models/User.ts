@@ -40,6 +40,7 @@ export interface IUser extends Document {
     totalTipsReceived: number;
     totalViews: number;
   };
+  subscriptionPriceGhs: number;
   isDeleted: boolean;
   lastLoginAt?: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -84,6 +85,7 @@ const UserSchema = new mongoose.Schema<IUser>(
       totalTipsReceived: { type: Number, default: 0 },
       totalViews: { type: Number, default: 0 },
     },
+    subscriptionPriceGhs: { type: Number, default: 20, min: 0 },
     isDeleted: { type: Boolean, default: false },
     lastLoginAt: { type: Date },
   },
