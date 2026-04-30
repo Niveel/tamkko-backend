@@ -21,12 +21,22 @@ export const createRoom = catchAsync(async (req: AuthRequest, res: Response) => 
 });
 
 export const listRooms = catchAsync(async (req: AuthRequest, res: Response) => {
-  const data = await vipService.listRooms(req.query);
+  const data = await vipService.listRooms(req.query, actorId(req));
+  res.json({ status: 'success', data });
+});
+
+export const listJoinedRooms = catchAsync(async (req: AuthRequest, res: Response) => {
+  const data = await vipService.listJoinedRooms(req.query, actorId(req));
+  res.json({ status: 'success', data });
+});
+
+export const listMyRooms = catchAsync(async (req: AuthRequest, res: Response) => {
+  const data = await vipService.listMyRooms(req.query, actorId(req));
   res.json({ status: 'success', data });
 });
 
 export const getRoom = catchAsync(async (req: AuthRequest, res: Response) => {
-  const data = await vipService.getRoom(req.params.roomId);
+  const data = await vipService.getRoom(req.params.roomId, actorId(req));
   res.json({ status: 'success', data });
 });
 
@@ -43,6 +53,11 @@ export const deleteRoom = catchAsync(async (req: AuthRequest, res: Response) => 
 export const joinRoom = catchAsync(async (req: AuthRequest, res: Response) => {
   const data = await vipService.joinRoom(req.params.roomId, actorId(req), req.body);
   res.status(201).json({ status: 'success', data });
+});
+
+export const previewPromoCode = catchAsync(async (req: AuthRequest, res: Response) => {
+  const data = await vipService.previewPromoCode(req.params.roomId, req.body);
+  res.json({ status: 'success', data });
 });
 
 export const leaveRoom = catchAsync(async (req: AuthRequest, res: Response) => {
@@ -78,6 +93,26 @@ export const deletePost = catchAsync(async (_req: AuthRequest, res: Response) =>
 export const processPayment = catchAsync(async (req: AuthRequest, res: Response) => {
   const data = await vipService.processPayment(req.params.roomId, actorId(req), req.body);
   res.json({ status: 'success', data });
+});
+
+export const listAccessPasses = catchAsync(async (req: AuthRequest, res: Response) => {
+  const data = await vipService.listAccessPasses(req.params.roomId, actorId(req));
+  res.json({ status: 'success', data });
+});
+
+export const createAccessPass = catchAsync(async (req: AuthRequest, res: Response) => {
+  const data = await vipService.createAccessPass(actorId(req), req.body);
+  res.status(201).json({ status: 'success', data });
+});
+
+export const updateAccessPass = catchAsync(async (req: AuthRequest, res: Response) => {
+  const data = await vipService.updateAccessPass(actorId(req), req.params.passId, req.body);
+  res.json({ status: 'success', data });
+});
+
+export const deleteAccessPass = catchAsync(async (req: AuthRequest, res: Response) => {
+  await vipService.deleteAccessPass(actorId(req), req.params.passId);
+  res.json({ status: 'success', message: 'Access pass deleted.' });
 });
 
 export const handlePaymentWebhook = catchAsync(async (req: AuthRequest, res: Response) => {

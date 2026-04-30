@@ -20,12 +20,21 @@ export interface IUser extends Document {
     pendingBalance: number;
     currency: string;
     lastWithdrawalAt?: Date;
+    momoAccount?: {
+      network: 'mtn' | 'vodafone' | 'airteltigo';
+      phoneNumber: string;
+      accountName: string;
+      isVerified: boolean;
+      updatedAt: Date;
+    };
   };
   referral: {
     code: string;
     referredBy?: Types.ObjectId;
     referralCount: number;
     referralEarnings: number;
+    isAmbassador: boolean;
+    ambassadorApprovedAt?: Date;
   };
   settings: {
     pushNotifications: boolean;
@@ -65,12 +74,21 @@ const UserSchema = new mongoose.Schema<IUser>(
       pendingBalance: { type: Number, default: 0, min: 0 },
       currency: { type: String, default: 'GHS' },
       lastWithdrawalAt: { type: Date },
+      momoAccount: {
+        network: { type: String, enum: ['mtn', 'vodafone', 'airteltigo'] },
+        phoneNumber: { type: String },
+        accountName: { type: String },
+        isVerified: { type: Boolean, default: false },
+        updatedAt: { type: Date },
+      },
     },
     referral: {
       code: { type: String, required: true, unique: true, index: true },
       referredBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
       referralCount: { type: Number, default: 0 },
       referralEarnings: { type: Number, default: 0 },
+      isAmbassador: { type: Boolean, default: false, index: true },
+      ambassadorApprovedAt: { type: Date },
     },
     settings: {
       pushNotifications: { type: Boolean, default: true },

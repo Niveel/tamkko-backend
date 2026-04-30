@@ -23,3 +23,9 @@ export const getMySubscribersSchema = z.object({
     q: z.string().optional(),
   }),
 });
+
+export const updateAvatarSchema = z.object({
+  body: z.object({
+    profile_picture: z.string().url(),
+  }),
+});

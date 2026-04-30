@@ -14,6 +14,8 @@ export const processTipSchema = z.object({
 export const requestWithdrawalSchema = z.object({
   body: z.object({
     amount_ghs: z.string().regex(/^\d+(\.\d{1,2})?$/),
+    network: z.string().optional(),
+    phone_number: z.string().optional(),
     action_token: z.string().optional(),
   }),
 });
@@ -21,6 +23,7 @@ export const requestWithdrawalSchema = z.object({
 export const transactionHistorySchema = z.object({
   type: z.string().optional(),
   limit: z.coerce.number().optional(),
+  cursor: z.string().optional(),
 });
 
 export const processPayoutSchema = z.object({
@@ -33,4 +36,9 @@ export const processPayoutSchema = z.object({
 
 export const platformRevenueSchema = z.object({
   period: z.string().optional(),
+});
+
+export const earningsByVideoSchema = z.object({
+  period: z.enum(['7d', '30d', '90d', 'all']).optional(),
+  sort: z.enum(['earnings', 'tips_count', 'views']).optional(),
 });

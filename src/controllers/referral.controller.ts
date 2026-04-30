@@ -34,9 +34,20 @@ export const applyForAmbassador = catchAsync(async (req: AuthRequest, res: Respo
 });
 
 export const getAmbassadorStatus = catchAsync(async (_req: AuthRequest, res: Response) => {
-  res.json({ status: 'success', data: { is_ambassador: false, application_status: 'none', reward_rate_percent: 5 } });
+  const result = await referralService.getAmbassadorStatus(_req.user!.id);
+  res.json({ status: 'success', data: result });
 });
 
 export const getMyLeaderboardPosition = catchAsync(async (_req: AuthRequest, res: Response) => {
   res.json({ status: 'success', data: { top_referrers: null, fastest_growing: null, campus_leaders: null } });
+});
+
+export const adminListAmbassadorApplications = catchAsync(async (req, res: Response) => {
+  const result = await referralService.adminListAmbassadorApplications(req.query as { status?: string; limit?: number; cursor?: string });
+  res.json({ status: 'success', data: result });
+});
+
+export const adminReviewAmbassadorApplication = catchAsync(async (req: AuthRequest, res: Response) => {
+  const result = await referralService.adminReviewAmbassadorApplication(req.user!.id, req.params.application_id, req.body);
+  res.json({ status: 'success', message: 'Application reviewed.', data: result });
 });

@@ -43,6 +43,8 @@ export interface ITransaction extends Document {
   // Audit
   processedAt?: Date;
   isDeleted: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const TransactionSchema = new Schema<ITransaction>(

@@ -2,6 +2,7 @@ import { PipelineStage, Types } from 'mongoose';
 import { Follow } from '@/models/Follow';
 import { ApiError } from '@/utils/apiError';
 import { UserSubscription } from '@/models/UserSubscription';
+import { User } from '@/models/User';
 
 const encodeCursor = (payload: { id: string; followed_at: string }) =>
   `cursor_${Buffer.from(JSON.stringify(payload)).toString('base64url')}`;
@@ -282,4 +283,36 @@ export const getMySubscribers = async (userId: string, query: { cursor?: string;
   }));
 
   return { total_subscribers_count, subscribers, next_cursor, has_more };
+};
+
+export const uploadMyAvatar = async (userId: string, profilePicture: string) => {
+  const user = await User.findOneAndUpdate(
+    { _id: userId, isDeleted: false },
+    { 'profile.avatarUrl': profilePicture },
+    { new: true }
+  ).select('_id');
+
+  if (!user) throw new ApiError(404, 'User not found');
+  return { profile_picture: profilePicture };
+};
+
+export const updateMyAvatar = async (userId: string, profilePicture: string) => {
+  const user = await User.findOneAndUpdate(
+    { _id: userId, isDeleted: false },
+    { 'profile.avatarUrl': profilePicture },
+    { new: true }
+  ).select('_id');
+
+  if (!user) throw new ApiError(404, 'User not found');
+  return { profile_picture: profilePicture };
+};
+
+export const deleteMyAvatar = async (userId: string) => {
+  const user = await User.findOne({ _id: userId, isDeleted: false }).select('profile.avatarUrl');
+  if (!user) throw new ApiError(404, 'User not found');
+  if (!user.profile?.avatarUrl) throw new ApiError(404, 'Avatar not found');
+
+  user.profile.avatarUrl = '';
+  await user.save();
+  return { profile_picture: null };
 };

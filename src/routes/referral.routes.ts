@@ -1,7 +1,12 @@
 import { Router } from 'express';
 import { auth } from '@middleware/auth';
 import { validate } from '@middleware/validate';
-import { applyAmbassadorValidator, getLeaderboardValidator } from '@validators/referral.validator';
+import {
+  applyAmbassadorValidator,
+  getLeaderboardValidator,
+  adminListAmbassadorApplicationsValidator,
+  adminReviewAmbassadorApplicationValidator,
+} from '@validators/referral.validator';
 import * as referralController from '@controllers/referral.controller';
 
 const router = Router();
@@ -14,5 +19,17 @@ router.get('/leaderboard/top-referrers', validate(getLeaderboardValidator), refe
 router.get('/leaderboard/my-position', auth(), referralController.getMyLeaderboardPosition);
 router.post('/ambassador/apply', auth(), validate(applyAmbassadorValidator), referralController.applyForAmbassador);
 router.get('/ambassador/status', auth(), referralController.getAmbassadorStatus);
+router.get(
+  '/admin/ambassador/applications',
+  auth(['admin', 'moderator']),
+  validate(adminListAmbassadorApplicationsValidator, 'query'),
+  referralController.adminListAmbassadorApplications
+);
+router.patch(
+  '/admin/ambassador/applications/:application_id',
+  auth(['admin', 'moderator']),
+  validate(adminReviewAmbassadorApplicationValidator),
+  referralController.adminReviewAmbassadorApplication
+);
 
 export default router;
