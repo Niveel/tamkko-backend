@@ -17,6 +17,18 @@ const envSchema = z.object({
   HUBTEL_CLIENT_SECRET: z.string().optional(),
   CLOUDFLARE_ACCOUNT_ID: z.string().optional(),
   CLOUDFLARE_STREAM_TOKEN: z.string().optional(),
+  MUX_TOKEN_ID: z.string().optional(),
+  MUX_TOKEN_SECRET: z.string().optional(),
+  MUX_WEBHOOK_SECRET: z.string().optional(),
+  MUX_MAX_DURATION_SECONDS: z.coerce.number().default(60),
+  MUX_MAX_UPLOAD_SIZE_BYTES: z.coerce.number().default(104857600),
+  MUX_PLAYBACK_POLICY: z.enum(['public', 'signed']).default('public'),
+  MUX_ALLOWED_VIDEO_CODECS: z.string().default('h264'),
+  MUX_ALLOWED_VIDEO_PROFILES: z.string().default('baseline,main,high'),
+  CLOUDINARY_CLOUD_NAME: z.string().optional(),
+  CLOUDINARY_API_KEY: z.string().optional(),
+  CLOUDINARY_API_SECRET: z.string().optional(),
+  CLOUDINARY_UPLOAD_PRESET: z.string().optional(),
   EXPO_ACCESS_TOKEN: z.string().optional(),
   EMAIL_PROVIDER: z.enum(['sendgrid', 'ses', 'smtp']).default('sendgrid'),
   EMAIL_API_KEY: z.string().optional(),
@@ -28,6 +40,7 @@ const envSchema = z.object({
   RATE_LIMIT_WINDOW_MS: z.coerce.number().default(900000),
   RATE_LIMIT_MAX: z.coerce.number().default(100),
   BCRYPT_ROUNDS: z.coerce.number().default(12),
+  MOCK_SEED_ON_STARTUP: z.coerce.boolean().default(true),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

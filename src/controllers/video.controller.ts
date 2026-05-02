@@ -1,9 +1,36 @@
-import { Response } from 'express';
+import { NextFunction, Response } from 'express';
 import { AuthRequest } from '@middleware/auth';
 import { videoService } from '@services/video.service';
 import { catchAsync } from '@utils/catchAsync';
+import { ApiError } from '@utils/apiError';
 
 export const videoController = {
+  createUploadUrl: catchAsync(async (req: AuthRequest, res: Response) => {
+    const result = await videoService.createUploadUrlDraft({
+      creatorId: req.user!.id,
+      ...req.body,
+    });
+    res.status(201).json({ status: 'success', data: result });
+  }),
+
+  publishPost: async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const result = await videoService.publishPost(req.user!.id, req.body);
+      res.status(201).json({ status: 'success', data: result });
+    } catch (error: any) {
+      if (error instanceof ApiError && (error as any).errors?.code?.[0]) {
+        return res.status(error.statusCode).json({
+          status: 'error',
+          error: {
+            code: (error as any).errors.code[0],
+            message: error.message,
+          },
+        });
+      }
+      return next(error);
+    }
+  },
+
   initializeUpload: catchAsync(async (req: AuthRequest, res: Response) => {
     const result = await videoService.initializeUpload({
       creatorId: req.user!.id,
@@ -14,6 +41,15 @@ export const videoController = {
 
   getUploadStatus: catchAsync(async (req, res: Response) => {
     const result = await videoService.getUploadStatus(req.params.uploadId);
+    res.json({ status: 'success', data: result });
+  }),
+
+  getUploadStatusByVideoId: catchAsync(async (req: AuthRequest, res: Response) => {
+    const result = await videoService.getUploadStatusByVideoId(
+      req.params.videoId,
+      req.user!.id,
+      req.user!.role
+    );
     res.json({ status: 'success', data: result });
   }),
 
@@ -49,5 +85,18 @@ export const videoController = {
   deleteVideo: catchAsync(async (req: AuthRequest, res: Response) => {
     await videoService.deleteVideo(req.params.videoId, req.user!.id);
     res.status(204).send();
+  }),
+
+  muxWebhook: catchAsync(async (req, res: Response) => {
+    const bodyBuffer = Buffer.isBuffer(req.body) ? req.body : Buffer.from(JSON.stringify(req.body || {}), 'utf8');
+    const rawBody = bodyBuffer.toString('utf8');
+    const signatureHeader = req.header('mux-signature');
+
+    const isValid = videoService.verifyMuxWebhookSignature(signatureHeader, rawBody);
+    if (!isValid) throw new ApiError(401, 'Invalid Mux webhook signature');
+
+    const parsed = JSON.parse(rawBody);
+    const result = await videoService.handleMuxWebhook(parsed);
+    res.status(200).json({ success: true, data: result });
   }),
 };

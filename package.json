@@ -11,9 +11,11 @@
     "format": "prettier --write \"src/**/*.ts\""
   },
   "dependencies": {
+    "@mux/mux-node": "^14.0.1",
     "axios": "^1.6.7",
     "bcryptjs": "^2.4.3",
     "bullmq": "^5.1.6",
+    "cloudinary": "^2.10.0",
     "compression": "^1.7.4",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",

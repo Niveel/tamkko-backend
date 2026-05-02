@@ -6,6 +6,19 @@ import { videoValidator } from '../validators/video.validator';
 
 const router = express.Router();
 
+router.post(
+  '/upload-url',
+  auth(['creator', 'admin']),
+  validate(videoValidator.createUploadUrl),
+  videoController.createUploadUrl
+);
+router.post(
+  '/publish',
+  auth(['creator', 'admin']),
+  validate(videoValidator.publishPost),
+  videoController.publishPost
+);
+
 /**
  * @route   POST /api/v1/videos/upload
  * @desc    Initialize direct video upload to Cloudflare Stream
@@ -27,6 +40,12 @@ router.get(
   '/status/:uploadId',
   auth(['creator', 'admin']),
   videoController.getUploadStatus
+);
+router.get(
+  '/:videoId/upload-status',
+  auth(['creator', 'admin']),
+  validate(videoValidator.getUploadStatusByVideoId),
+  videoController.getUploadStatusByVideoId
 );
 
 /**
