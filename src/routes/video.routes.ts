@@ -8,13 +8,13 @@ const router = express.Router();
 
 router.post(
   '/upload-url',
-  auth(['creator', 'admin']),
+  auth(['user', 'creator', 'admin']),
   validate(videoValidator.createUploadUrl),
   videoController.createUploadUrl
 );
 router.post(
   '/publish',
-  auth(['creator', 'admin']),
+  auth(['user', 'creator', 'admin']),
   validate(videoValidator.publishPost),
   videoController.publishPost
 );
@@ -38,12 +38,12 @@ router.post(
  */
 router.get(
   '/status/:uploadId',
-  auth(['creator', 'admin']),
+  auth(['user', 'creator', 'admin']),
   videoController.getUploadStatus
 );
 router.get(
   '/:videoId/upload-status',
-  auth(['creator', 'admin']),
+  auth(['user', 'creator', 'admin']),
   validate(videoValidator.getUploadStatusByVideoId),
   videoController.getUploadStatusByVideoId
 );
@@ -57,6 +57,24 @@ router.get(
   '/feed',
   validate(videoValidator.getFeed),
   videoController.getFeed
+);
+router.get(
+  '/mine',
+  auth(['user', 'creator', 'admin']),
+  validate(videoValidator.getMyVideos),
+  videoController.getMyVideos
+);
+router.get(
+  '/mine/:videoId',
+  auth(['user', 'creator', 'admin']),
+  validate(videoValidator.getMyVideoDetails),
+  videoController.getMyVideoDetails
+);
+router.patch(
+  '/mine/:videoId',
+  auth(['user', 'creator', 'admin']),
+  validate(videoValidator.updateMyVideo),
+  videoController.updateMyVideo
 );
 
 /**
@@ -111,9 +129,33 @@ router.post(
  */
 router.delete(
   '/:videoId',
-  auth(['creator', 'admin']),
+  auth(['user', 'creator', 'admin']),
   validate(videoValidator.getVideo),
   videoController.deleteVideo
+);
+router.get(
+  '/:videoId/comments',
+  auth(['user', 'creator', 'admin']),
+  validate(videoValidator.listComments),
+  videoController.listComments
+);
+router.post(
+  '/:videoId/comments',
+  auth(['user', 'creator', 'admin']),
+  validate(videoValidator.createComment),
+  videoController.createComment
+);
+router.post(
+  '/comments/:commentId/like-toggle',
+  auth(['user', 'creator', 'admin']),
+  validate(videoValidator.toggleCommentLike),
+  videoController.toggleCommentLike
+);
+router.delete(
+  '/comments/:commentId',
+  auth(['user', 'creator', 'admin']),
+  validate(videoValidator.deleteComment),
+  videoController.deleteComment
 );
 
 export { router as videoRoutes };

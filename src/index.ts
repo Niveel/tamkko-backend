@@ -34,6 +34,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(compression());
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+app.use('/vids', express.static(path.join(process.cwd(), 'vids')));
 
 // Health Check
 app.get('/health', (_req, res) => {

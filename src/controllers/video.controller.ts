@@ -87,6 +87,82 @@ export const videoController = {
     res.status(204).send();
   }),
 
+  listComments: catchAsync(async (req: AuthRequest, res: Response) => {
+    const result = await videoService.listComments(req.user!.id, req.params.videoId, req.query as any);
+    res.json({ status: 'success', data: result });
+  }),
+
+  createComment: async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const result = await videoService.createComment(req.user!.id, req.params.videoId, req.body);
+      res.status(201).json({ status: 'success', data: result });
+    } catch (error: any) {
+      if (error instanceof ApiError && (error as any).errors?.code?.[0]) {
+        return res.status(error.statusCode).json({ status: 'error', error: { code: (error as any).errors.code[0], message: error.message } });
+      }
+      return next(error);
+    }
+  },
+
+  toggleCommentLike: async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const result = await videoService.toggleCommentLike(req.user!.id, req.params.commentId);
+      res.json({ status: 'success', data: result });
+    } catch (error: any) {
+      if (error instanceof ApiError && (error as any).errors?.code?.[0]) {
+        return res.status(error.statusCode).json({ status: 'error', error: { code: (error as any).errors.code[0], message: error.message } });
+      }
+      return next(error);
+    }
+  },
+
+  deleteComment: async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const result = await videoService.deleteComment(req.user!.id, req.user!.role, req.params.commentId);
+      res.json({ status: 'success', data: result });
+    } catch (error: any) {
+      if (error instanceof ApiError && (error as any).errors?.code?.[0]) {
+        return res.status(error.statusCode).json({ status: 'error', error: { code: (error as any).errors.code[0], message: error.message } });
+      }
+      return next(error);
+    }
+  },
+
+  getMyVideos: catchAsync(async (req: AuthRequest, res: Response) => {
+    const result = await videoService.listMyVideos(req.user!.id, req.query as any);
+    res.json({ status: 'success', data: result });
+  }),
+
+  getMyVideoDetails: async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const result = await videoService.getMyVideoDetails(req.user!.id, req.params.videoId);
+      res.json({ status: 'success', data: result });
+    } catch (error: any) {
+      if (error instanceof ApiError && (error as any).errors?.code?.[0]) {
+        return res.status(error.statusCode).json({
+          status: 'error',
+          error: { code: (error as any).errors.code[0], message: error.message },
+        });
+      }
+      return next(error);
+    }
+  },
+
+  updateMyVideo: async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const result = await videoService.updateMyVideo(req.user!.id, req.params.videoId, req.body);
+      res.json({ status: 'success', data: result });
+    } catch (error: any) {
+      if (error instanceof ApiError && (error as any).errors?.code?.[0]) {
+        return res.status(error.statusCode).json({
+          status: 'error',
+          error: { code: (error as any).errors.code[0], message: error.message },
+        });
+      }
+      return next(error);
+    }
+  },
+
   muxWebhook: catchAsync(async (req, res: Response) => {
     const bodyBuffer = Buffer.isBuffer(req.body) ? req.body : Buffer.from(JSON.stringify(req.body || {}), 'utf8');
     const rawBody = bodyBuffer.toString('utf8');

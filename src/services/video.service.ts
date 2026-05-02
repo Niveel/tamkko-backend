@@ -5,6 +5,8 @@ import { env } from '@config/env';
 import { createDirectUploadUrl } from '@services/mux.service';
 import { User } from '@models/User';
 import { getAssetTechnicalDetails } from '@services/mux.service';
+import { VideoComment } from '@models/VideoComment';
+import { VideoCommentLike } from '@models/VideoCommentLike';
 
 export class VideoService {
   private allowedVideoCodecs = new Set(
@@ -405,6 +407,122 @@ export class VideoService {
     };
   }
 
+  async listMyVideos(userId: string, query: { cursor?: string; limit?: number; filter?: 'all' | 'free' | 'paid' }) {
+    const limit = Math.min(Number(query.limit || 20), 50);
+    const filter: Record<string, unknown> = { creator: userId, isDeleted: false, isPublished: true };
+    if (query.cursor) filter._id = { $lt: query.cursor };
+    if (query.filter === 'paid') filter.visibility = 'paid';
+    if (query.filter === 'free') filter.visibility = { $ne: 'paid' };
+
+    const rows = await Video.find(filter).sort({ _id: -1 }).limit(limit + 1);
+    const hasMore = rows.length > limit;
+    const page = hasMore ? rows.slice(0, limit) : rows;
+
+    return {
+      items: page.map((v) => ({
+        id: String(v._id),
+        title: v.title || '',
+        caption: v.description || '',
+        media_type: v.mediaType || 'video',
+        visibility: v.visibility || 'public',
+        is_paid: v.visibility === 'paid',
+        price_ghs: v.priceGhs ?? null,
+        allow_comments: Boolean(v.allowComments),
+        created_at: v.createdAt.toISOString(),
+        thumbnail_url: v.thumbnailUrl || null,
+        duration_seconds: (v.mediaType || 'video') === 'video' ? Number(v.duration || 0) : null,
+        views_count: Number(v.views || 0),
+        shares_count: Number((v as any).shares || 0),
+        likes_count: Number(v.likes || 0),
+        comments_count: Number((v as any).commentsCount || 0),
+      })),
+      next_cursor: hasMore ? String(page[page.length - 1]._id) : null,
+      has_more: hasMore,
+    };
+  }
+
+  async getMyVideoDetails(userId: string, videoId: string) {
+    const post = await Video.findOne({ _id: videoId, creator: userId, isDeleted: false });
+    if (!post) this.publishError(404, 'POST_NOT_FOUND', 'Post not found.');
+
+    return {
+      post: {
+        id: String(post._id),
+        title: post.title || '',
+        caption: post.description || '',
+        media_type: post.mediaType || 'video',
+        visibility: post.visibility || 'public',
+        allow_comments: Boolean(post.allowComments),
+        is_paid: post.visibility === 'paid',
+        price_ghs: post.priceGhs ?? null,
+        created_at: post.createdAt.toISOString(),
+        media: (post.mediaType || 'video') === 'video'
+          ? {
+              provider: 'mux',
+              playback_id: post.muxPlaybackId || null,
+              hls_url: post.videoUrl || null,
+              thumbnail_url: post.thumbnailUrl || null,
+              duration_seconds: Number(post.duration || 0),
+            }
+          : {
+              provider: 'cloudinary',
+              url: post.videoUrl || null,
+              public_id: post.imagePublicId || null,
+              width: post.imageWidth || null,
+              height: post.imageHeight || null,
+              format: post.imageFormat || null,
+              bytes: post.imageBytes || null,
+            },
+      },
+    };
+  }
+
+  async updateMyVideo(
+    userId: string,
+    videoId: string,
+    payload: { title?: string; caption?: string; visibility?: 'public' | 'paid' | 'followers_only' | 'private'; allow_comments?: boolean }
+  ) {
+    const post = await Video.findOne({ _id: videoId, creator: userId, isDeleted: false });
+    if (!post) this.publishError(404, 'POST_NOT_FOUND', 'Post not found.');
+
+    if (payload.visibility === 'paid') {
+      const creator = await User.findOne({ _id: userId, isDeleted: false }).select('subscriptionPriceGhs');
+      const price = Number(creator?.subscriptionPriceGhs ?? 0);
+      if (!Number.isFinite(price) || price <= 0) {
+        this.publishError(
+          400,
+          'SUBSCRIPTION_PRICE_NOT_SET',
+          'Set Subscription Pricing first in Profile Workspace > Subscription Pricing before setting post to paid.'
+        );
+      }
+      post.priceGhs = price;
+    } else if (payload.visibility) {
+      post.priceGhs = null;
+    }
+
+    if (payload.title !== undefined) post.title = payload.title;
+    if (payload.caption !== undefined) post.description = payload.caption;
+    if (payload.visibility !== undefined) {
+      post.visibility = payload.visibility;
+      post.isPublic = payload.visibility === 'public';
+    }
+    if (payload.allow_comments !== undefined) post.allowComments = payload.allow_comments;
+
+    await post.save();
+
+    return {
+      post: {
+        id: String(post._id),
+        title: post.title || '',
+        caption: post.description || '',
+        visibility: post.visibility || 'public',
+        allow_comments: Boolean(post.allowComments),
+        is_paid: post.visibility === 'paid',
+        price_ghs: post.priceGhs ?? null,
+      },
+    };
+  }
+
   async getVideo(videoId: string) {
     const video = await Video.findOne({ _id: videoId, isDeleted: false }).populate('creator', 'username profile');
     if (!video) throw new ApiError(404, 'Video not found');
@@ -447,6 +565,144 @@ export class VideoService {
       { new: true }
     );
     if (!video) throw new ApiError(404, 'Video not found or permission denied');
+  }
+
+  private mapCommentItem(comment: any, likedByMe: boolean, parentDeleted: boolean) {
+    return {
+      id: String(comment._id),
+      post_id: String(comment.video),
+      author: {
+        id: String(comment.author?._id || ''),
+        username: comment.author?.username || '',
+        display_name: comment.author?.profile?.displayName || comment.author?.username || '',
+        avatar_url: comment.author?.profile?.avatarUrl || null,
+      },
+      body: comment.isDeleted ? '' : comment.body,
+      parent_comment_id: comment.parentComment ? String(comment.parentComment) : null,
+      root_comment_id: comment.rootComment ? String(comment.rootComment) : null,
+      is_deleted: Boolean(comment.isDeleted),
+      deleted_by: comment.deletedBy || null,
+      parent_deleted: parentDeleted,
+      liked_by_me: likedByMe,
+      likes_count: Number(comment.likesCount || 0),
+      replies_count: Number(comment.repliesCount || 0),
+      created_at: comment.createdAt.toISOString(),
+      updated_at: comment.updatedAt.toISOString(),
+    };
+  }
+
+  async listComments(
+    actorId: string,
+    videoId: string,
+    query: { cursor?: string; limit?: number; sort?: 'oldest' | 'newest' }
+  ) {
+    const post = await Video.findOne({ _id: videoId, isDeleted: false });
+    if (!post) this.publishError(404, 'POST_NOT_FOUND', 'Post not found.');
+
+    const sortMode = query.sort || 'oldest';
+    const limit = Math.min(Number(query.limit || 30), 100);
+    const filter: Record<string, any> = { video: videoId };
+    if (query.cursor) {
+      filter._id = sortMode === 'oldest' ? { $gt: query.cursor } : { $lt: query.cursor };
+    }
+
+    const sort = sortMode === 'oldest' ? { _id: 1 } : { _id: -1 };
+    const rows = await VideoComment.find(filter)
+      .sort(sort as any)
+      .limit(limit + 1)
+      .populate('author', 'username profile.displayName profile.avatarUrl')
+      .lean();
+
+    const hasMore = rows.length > limit;
+    const page = hasMore ? rows.slice(0, limit) : rows;
+    const commentIds = page.map((c) => c._id);
+    const likedRows = await VideoCommentLike.find({ user: actorId, comment: { $in: commentIds } }).select('comment').lean();
+    const likedSet = new Set(likedRows.map((r) => String(r.comment)));
+
+    const parentIds = page.filter((c) => c.parentComment).map((c) => c.parentComment as any);
+    const parentRows = parentIds.length
+      ? await VideoComment.find({ _id: { $in: parentIds } }).select('_id isDeleted').lean()
+      : [];
+    const parentDeletedSet = new Set(parentRows.filter((p) => p.isDeleted).map((p) => String(p._id)));
+
+    return {
+      items: page.map((c) => this.mapCommentItem(c, likedSet.has(String(c._id)), c.parentComment ? parentDeletedSet.has(String(c.parentComment)) : false)),
+      next_cursor: hasMore ? String(page[page.length - 1]._id) : null,
+      has_more: hasMore,
+    };
+  }
+
+  async createComment(actorId: string, videoId: string, body: { body: string; parent_comment_id?: string }) {
+    const post = await Video.findOne({ _id: videoId, isDeleted: false });
+    if (!post) this.publishError(404, 'POST_NOT_FOUND', 'Post not found.');
+    if (!post.allowComments) this.publishError(403, 'COMMENTS_DISABLED', 'Comments are disabled for this post.');
+
+    let parent: any = null;
+    let rootComment: any = null;
+    if (body.parent_comment_id) {
+      parent = await VideoComment.findOne({ _id: body.parent_comment_id, video: videoId });
+      if (!parent) this.publishError(404, 'PARENT_COMMENT_NOT_FOUND', 'Parent comment not found.');
+      rootComment = parent.rootComment || parent._id;
+    }
+
+    const created = await VideoComment.create({
+      video: videoId,
+      author: actorId,
+      body: body.body,
+      parentComment: parent?._id || null,
+      rootComment: rootComment || null,
+      isDeleted: false,
+    });
+
+    if (parent) {
+      await VideoComment.updateOne({ _id: parent._id }, { $inc: { repliesCount: 1 } });
+    }
+
+    const hydrated = await VideoComment.findById(created._id).populate('author', 'username profile.displayName profile.avatarUrl');
+    const parentDeleted = Boolean(parent?.isDeleted);
+    return this.mapCommentItem(hydrated, false, parentDeleted);
+  }
+
+  async toggleCommentLike(actorId: string, commentId: string) {
+    const comment = await VideoComment.findById(commentId);
+    if (!comment) this.publishError(404, 'COMMENT_NOT_FOUND', 'Comment not found.');
+
+    const existing = await VideoCommentLike.findOne({ comment: commentId, user: actorId });
+    if (existing) {
+      await VideoCommentLike.deleteOne({ _id: existing._id });
+      await VideoComment.updateOne({ _id: commentId, likesCount: { $gt: 0 } }, { $inc: { likesCount: -1 } });
+      const refreshed = await VideoComment.findById(commentId).select('likesCount');
+      return { comment_id: commentId, liked_by_me: false, likes_count: Number(refreshed?.likesCount || 0) };
+    }
+
+    await VideoCommentLike.create({ comment: commentId, user: actorId });
+    await VideoComment.updateOne({ _id: commentId }, { $inc: { likesCount: 1 } });
+    const refreshed = await VideoComment.findById(commentId).select('likesCount');
+    return { comment_id: commentId, liked_by_me: true, likes_count: Number(refreshed?.likesCount || 0) };
+  }
+
+  async deleteComment(actorId: string, actorRole: string, commentId: string) {
+    const comment = await VideoComment.findById(commentId);
+    if (!comment) this.publishError(404, 'COMMENT_NOT_FOUND', 'Comment not found.');
+
+    const post = await Video.findById(comment.video).select('creator');
+    if (!post) this.publishError(404, 'POST_NOT_FOUND', 'Post not found.');
+
+    const isAuthor = String(comment.author) === actorId;
+    const isPostCreator = String(post.creator) === actorId;
+    const isAdmin = actorRole === 'admin';
+
+    if (!isAuthor && !isPostCreator && !isAdmin) {
+      this.publishError(403, 'PERMISSION_DENIED', 'You can only delete your own comment.');
+    }
+
+    const deletedBy = isAdmin ? 'admin' : isPostCreator && !isAuthor ? 'post_creator' : 'author';
+    comment.isDeleted = true;
+    comment.deletedBy = deletedBy as any;
+    comment.body = '[deleted]';
+    await comment.save();
+
+    return { comment_id: commentId, is_deleted: true, deleted_by: deletedBy };
   }
 }
 

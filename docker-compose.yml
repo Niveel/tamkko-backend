@@ -10,6 +10,7 @@ services:
       - "5000:5000"
     volumes:
       - uploads_data:/app/uploads
+      - ./vids:/app/vids:ro
     depends_on:
       - mongo
       - redis

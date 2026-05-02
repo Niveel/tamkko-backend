@@ -8,6 +8,8 @@ export interface IVideo extends Document {
   creator: mongoose.Types.ObjectId;
   views: number;
   likes: number;
+  shares: number;
+  commentsCount?: number;
   duration: number;
   isPublic: boolean;
   tags: string[];
@@ -48,6 +50,8 @@ const VideoSchema = new Schema<IVideo>(
     creator: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     views: { type: Number, default: 0 },
     likes: { type: Number, default: 0 },
+    shares: { type: Number, default: 0 },
+    commentsCount: { type: Number, default: 0 },
     duration: { type: Number, default: 0 },
     isPublic: { type: Boolean, default: true },
     tags: [{ type: String, trim: true }],

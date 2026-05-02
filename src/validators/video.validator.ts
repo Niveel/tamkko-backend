@@ -46,6 +46,25 @@ export const videoValidator = {
       limit: z.coerce.number().min(1).max(50).optional(),
     }),
   }),
+  getMyVideos: z.object({
+    query: z.object({
+      cursor: z.string().optional(),
+      limit: z.coerce.number().min(1).max(50).optional(),
+      filter: z.enum(['all', 'free', 'paid']).optional(),
+    }),
+  }),
+  getMyVideoDetails: z.object({
+    params: z.object({ videoId: z.string().min(1) }),
+  }),
+  updateMyVideo: z.object({
+    params: z.object({ videoId: z.string().min(1) }),
+    body: z.object({
+      title: z.string().min(1).max(200).optional(),
+      caption: z.string().max(2000).optional(),
+      visibility: z.enum(['public', 'paid', 'followers_only', 'private']).optional(),
+      allow_comments: z.boolean().optional(),
+    }),
+  }),
   getVideo: z.object({ params: z.object({ videoId: z.string().min(1) }) }),
   getUploadStatusByVideoId: z.object({ params: z.object({ videoId: z.string().min(1) }) }),
   getUserVideos: z.object({
@@ -61,5 +80,26 @@ export const videoValidator = {
       reason: z.string().min(1),
       description: z.string().optional(),
     }),
+  }),
+  listComments: z.object({
+    params: z.object({ videoId: z.string().min(1) }),
+    query: z.object({
+      cursor: z.string().optional(),
+      limit: z.coerce.number().min(1).max(100).optional(),
+      sort: z.enum(['oldest', 'newest']).optional(),
+    }),
+  }),
+  createComment: z.object({
+    params: z.object({ videoId: z.string().min(1) }),
+    body: z.object({
+      body: z.string().min(1).max(2000),
+      parent_comment_id: z.string().min(1).optional(),
+    }),
+  }),
+  toggleCommentLike: z.object({
+    params: z.object({ commentId: z.string().min(1) }),
+  }),
+  deleteComment: z.object({
+    params: z.object({ commentId: z.string().min(1) }),
   }),
 };
